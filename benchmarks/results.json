@@ -8,19 +8,19 @@
     "accuracy_pct": 98.31,
     "critical_recall_pct": 100.0,
     "avg_cpu_pct": 2.0,
-    "energy_laptop_mj": 0.0016,
-    "energy_pi5_mj": 0.0006
+    "energy_laptop_mj": 0.0015,
+    "energy_pi5_mj": 0.0005
   },
   "M2 (PTQ INT8)": {
     "file_size_kb": 4.66,
     "mean_latency_ms": 0.005,
     "p95_latency_ms": 0.006,
     "min_latency_ms": 0.005,
-    "max_latency_ms": 0.008,
+    "max_latency_ms": 0.007,
     "accuracy_pct": 98.31,
     "critical_recall_pct": 94.12,
     "avg_cpu_pct": 2.0,
-    "energy_laptop_mj": 0.0038,
+    "energy_laptop_mj": 0.0037,
     "energy_pi5_mj": 0.0013
   },
   "M3 (Pruned 35% + INT8)": {
@@ -28,11 +28,11 @@
     "mean_latency_ms": 0.005,
     "p95_latency_ms": 0.006,
     "min_latency_ms": 0.005,
-    "max_latency_ms": 0.008,
+    "max_latency_ms": 0.007,
     "accuracy_pct": 94.92,
     "critical_recall_pct": 100.0,
     "avg_cpu_pct": 2.0,
-    "energy_laptop_mj": 0.0038,
+    "energy_laptop_mj": 0.0037,
     "energy_pi5_mj": 0.0013
   }
 }
