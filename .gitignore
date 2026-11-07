@@ -58,7 +58,6 @@ yarn-error.log*
 htmlcov/
 
 # ── Keep Required Assignment Data & Model Artifacts ───────────────────────────
-# Ensure git tracks the model and validation artifacts required by graders
 !training/models/*.tflite
 !training/models/*.keras
 !inference/model.tflite
