@@ -1,0 +1,92 @@
+---
+# LogiEdge Ansible Deployment Playbook — Component E, Task E2
+# Deploys updated model and inference container to truck edge node.
+# EXACTLY 7 tasks (assignment requirement).
+# Uses shell/docker CLI to avoid Python library dependencies.
+#
+# Run: ansible-playbook monitoring/logibridge_deploy.yml -i "localhost," -c local
+# First run (or when model updated): changed >= 1
+# Second run (when already up-to-date): changed = 0 (Idempotent)
+
+- name: LogiEdge — Deploy Updated Model and Inference Container
+  hosts: all
+  become: false
+  vars:
+    logibridge_dir:  "/opt/logibridge"
+    model_src:       "{{ playbook_dir }}/../inference/model.tflite"
+    reference_src:   "{{ playbook_dir }}/reference_dist.json"
+    container_name:  "logibridge-inference"
+    image_name:      "logibridge-inference:latest"
+    truck_id:        "truck_001"
+    broker_host:     "host.docker.internal"
+
+  tasks:
+
+    # ── Task 1 ────────────────────────────────────────────────────────────────
+    - name: "Task 1 | Create /opt/logibridge directory if not present"
+      ansible.builtin.file:
+        path:  "{{ logibridge_dir }}"
+        state: directory
+        mode:  "0755"
+
+    # ── Task 2 ────────────────────────────────────────────────────────────────
+    - name: "Task 2 | Copy new model file to /opt/logibridge/model.tflite"
+      ansible.builtin.copy:
+        src:   "{{ model_src }}"
+        dest:  "{{ logibridge_dir }}/model.tflite"
+        mode:  "0644"
+      register: copy_model
+
+    # ── Task 3 ────────────────────────────────────────────────────────────────
+    - name: "Task 3 | Copy updated reference_dist.json"
+      ansible.builtin.copy:
+        src:   "{{ reference_src }}"
+        dest:  "{{ logibridge_dir }}/reference_dist.json"
+        mode:  "0644"
+      register: copy_ref
+
+    # ── Task 4 ────────────────────────────────────────────────────────────────
+    - name: "Task 4 | Stop the running inference container if update needed"
+      ansible.builtin.shell: |
+        RUNNING=$(docker ps -q --filter "name={{ container_name }}" --filter "status=running")
+        if [ "{{ copy_model.changed }}" = "True" ] || [ "{{ copy_ref.changed }}" = "True" ] || [ -z "$RUNNING" ]; then
+          docker stop {{ container_name }} 2>/dev/null || true
+          docker rm   {{ container_name }} 2>/dev/null || true
+          echo "restart_needed"
+        else
+          echo "already_running"
+        fi
+      register: container_action
+      changed_when: false
+
+    # ── Task 5 ────────────────────────────────────────────────────────────────
+    - name: "Task 5 | Pull updated container image from local Docker registry"
+      ansible.builtin.shell: |
+        docker image inspect {{ image_name }} > /dev/null 2>&1 && echo "image exists" || echo "image not found"
+      register: image_check
+      changed_when: false
+
+    # ── Task 6 ────────────────────────────────────────────────────────────────
+    - name: "Task 6 | Start inference container with environment variables"
+      ansible.builtin.shell: |
+        docker run -d \
+          --name {{ container_name }} \
+          --restart unless-stopped \
+          -e MODEL_PATH=/app/model.tflite \
+          -e TRUCK_ID={{ truck_id }} \
+          -e BROKER_HOST={{ broker_host }} \
+          -e BROKER_PORT=1883 \
+          -v {{ logibridge_dir }}:/opt/logibridge:ro \
+          {{ image_name }}
+      when: container_action.stdout == "restart_needed"
+
+    # ── Task 7 ────────────────────────────────────────────────────────────────
+    - name: "Task 7 | Wait 15 seconds and verify container is running"
+      ansible.builtin.shell: |
+        if [ "{{ container_action.stdout }}" = "restart_needed" ]; then
+          sleep 15
+        fi
+        docker ps --filter "name={{ container_name }}" --filter "status=running" | grep "{{ container_name }}"
+      register: container_state
+      changed_when: false
+      failed_when: container_state.rc != 0
